@@ -32,7 +32,7 @@ The following is an example on how the bot works in realtime-<br>
 Clone the repository in one of the directories in your system using:
 
 ```
-git clone https://github.com/Bot-Devel/Fanfiction-Finder.git
+git clone https://github.com/Maccygoat/Fanfiction-Finder.git
 ```
 
 ## Python
