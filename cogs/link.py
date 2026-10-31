@@ -28,11 +28,12 @@ class Link(commands.Cog):
             logger.info("Sleeping for 1s to avoid ratelimit")
             await asyncio.sleep(1)
 
-            embed_pg = ao3_metadata(query)
+            # Run the blocking scrape in a thread so gateway heartbeats keep flowing.
+            embed_pg = await asyncio.to_thread(ao3_metadata, query)
 
             if embed_pg is None:  # if not found in AO3, search in Fichub
                 logger.info("Fanfiction not found in AO3, trying to search Fichub")
-                embed_pg = fichub_metadata(query)
+                embed_pg = await asyncio.to_thread(fichub_metadata, query)
 
             logger.info(f"Sending embed to Channel-> {ctx.guild}:{ctx.channel.name}")
             if embed_pg:
@@ -51,11 +52,12 @@ class Link(commands.Cog):
             logger.info("Sleeping for 1s to avoid ratelimit")
             await asyncio.sleep(1)
 
-            embed_pg = fichub_metadata(query)
+            # Run the blocking scrape in a thread so gateway heartbeats keep flowing.
+            embed_pg = await asyncio.to_thread(fichub_metadata, query)
 
             if embed_pg is None:  # if not found in Fichub, search in AO3
                 logger.info("Fanfiction not found in Fichub, trying to search AO3")
-                embed_pg = ao3_metadata(query)
+                embed_pg = await asyncio.to_thread(ao3_metadata, query)
 
             logger.info(f"Sending embed to Channel-> {ctx.guild}:{ctx.channel.name}")
             if embed_pg:

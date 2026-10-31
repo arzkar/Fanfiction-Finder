@@ -3,6 +3,11 @@ Description=Fanfiction Finder Discord Bot
 Wants=network-online.target
 After=network-online.target
 
+# Circuit breaker: never allow a crash-restart loop to spam Discord with
+# fresh gateway sessions (1000+ connections triggers an automatic token reset).
+StartLimitIntervalSec=600
+StartLimitBurst=3
+
 [Service]
 Type=simple
 User=arbaaz
@@ -13,7 +18,7 @@ WorkingDirectory=/home/arbaaz/Projects/Fanfiction-Finder
 ExecStart=/home/arbaaz/Projects/Fanfiction-Finder/.venv/bin/python /home/arbaaz/Projects/Fanfiction-Finder/main.py
 
 Restart=on-failure
-RestartSec=5
+RestartSec=10
 
 TimeoutStopSec=30
 KillSignal=SIGTERM

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 import re
+import time
 import asyncio
 import traceback
 from loguru import logger
@@ -37,14 +38,21 @@ class FicFinder(commands.Bot):
 
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
         channel = self.get_channel(payload.channel_id)
-        message = await channel.fetch_message(payload.message_id)
-        
+        if channel is None or not isinstance(channel, discord.abc.Messageable):
+            return
+
+        try:
+            message = await channel.fetch_message(payload.message_id)
+        except discord.HTTPException:
+            return
+
         # Check if the message was sent by the bot
         if message.author == self.user:
             if payload.emoji.name == "👎":
                 await message.delete()
             else:
-                await message.remove_reaction(payload.emoji, payload.member)
+                member = payload.member or discord.Object(id=payload.user_id)
+                await message.remove_reaction(payload.emoji, member)
             
     async def on_message(self, message: discord.Message) -> None:
         """Command to search and find the fanfiction by scraping google"""
@@ -76,7 +84,8 @@ class FicFinder(commands.Bot):
 
                     i = i.replace("-log", "")
                     await message.channel.typing()
-                    embed_pg = fichub_metadata(i)
+                    # Run the blocking scrape in a thread so gateway heartbeats keep flowing.
+                    embed_pg = await asyncio.to_thread(fichub_metadata, i)
 
                     # if not found in FFN, search in AO3
                     if embed_pg is None or embed_pg.description.startswith(
@@ -87,7 +96,7 @@ class FicFinder(commands.Bot):
                         msg = i.replace("ao3", "")
                         msg = msg.replace("-log", "")
 
-                        embed_pg = ao3_metadata(msg)
+                        embed_pg = await asyncio.to_thread(ao3_metadata, msg)
 
                     logger.info(
                         f"Sending embed to Channel-> {message.channel.guild}:{message.channel.name}"
@@ -119,7 +128,7 @@ class FicFinder(commands.Bot):
                                 "archiveofourown.org URL was passed. Searching ao3"
                             )
 
-                            embed_pg = ao3_metadata(url)
+                            embed_pg = await asyncio.to_thread(ao3_metadata, url)
 
                             logger.info(
                                 f"Sending embed to Channel-> {message.channel.guild}:{message.channel.name}"
@@ -138,7 +147,7 @@ class FicFinder(commands.Bot):
                         if any(site.strip() in url.strip() for site in FICHUB_SITES):
                             await message.channel.typing()
                             logger.info("URL was passed. Searching Fichub")
-                            embed_pg = fichub_metadata(url)
+                            embed_pg = await asyncio.to_thread(fichub_metadata, url)
 
                             logger.info(
                                 f"Sending embed to Channel-> {message.channel.guild}:{message.channel.name}"
@@ -154,6 +163,50 @@ class FicFinder(commands.Bot):
         except Exception:
             logger.error(traceback.format_exc())
 
+def run_bot() -> None:
+    """Supervised entrypoint that keeps gateway reconnects sane.
+
+    Discord counts every fresh gateway connection and resets the bot token
+    when it sees 1000+ connections in a short window. A crash-restart loop
+    (e.g. systemd restarting the service every 5s) is indistinguishable from
+    a runaway bot, so:
+
+    * Fatal configuration errors (bad token, disabled intents) exit cleanly
+      (status 0) so ``Restart=on-failure`` does NOT loop on them — a restart
+      can never fix those.
+    * Transient failures (network outage, gateway instability) are retried
+      in-process with capped exponential backoff instead of letting the
+      process die and systemd hammer Discord with new sessions.
+    """
+    delay = 5.0
+
+    while True:
+        client = FicFinder()
+        try:
+            client.run(TOKEN)
+            return  # Clean shutdown (Ctrl+C / systemctl stop).
+
+        except discord.LoginFailure:
+            logger.critical(
+                "Discord rejected the bot token (LoginFailure). "
+                "Update DISCORD_TOKEN in .env, then restart the service. Not retrying."
+            )
+            return
+
+        except discord.PrivilegedIntentsRequired:
+            logger.critical(
+                "Privileged intents are not enabled for this bot in the Discord "
+                "developer portal. Enable them, then restart the service. Not retrying."
+            )
+            return
+
+        except Exception as err:
+            logger.opt(exception=err).error(
+                f"Unexpected fatal error: {err!r}. Retrying in {delay:.0f}s."
+            )
+            time.sleep(delay)
+            delay = min(delay * 2, 300.0)
+
+
 if __name__ == "__main__":
-    client = FicFinder()
-    client.run(TOKEN)
+    run_bot()
