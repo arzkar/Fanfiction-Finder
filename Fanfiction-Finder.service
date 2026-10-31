@@ -5,8 +5,10 @@ After=network-online.target
 
 # Circuit breaker: never allow a crash-restart loop to spam Discord with
 # fresh gateway sessions (1000+ connections triggers an automatic token reset).
+# Burst=5 tolerates normal deploy/restart workflows; sustained crash-loops
+# still cap at 5 starts per 10 minutes.
 StartLimitIntervalSec=600
-StartLimitBurst=3
+StartLimitBurst=5
 
 [Service]
 Type=simple
