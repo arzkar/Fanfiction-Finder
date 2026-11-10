@@ -108,7 +108,7 @@ def ao3_metadata(query: str):
                         value= " ☘︎ ".join(parsed_download_data), inline=True)
 
             embed.add_field(name="\u200b",  # zero-width whitespace character
-                            value="*If this content violates the server rules, react with 👎 and it will be removed.\nThe bot is fetching data from ArchiveOfOwnOwn.net.*", inline=False)
+                            value="*If this content violates the server rules, react with 👎 and it will be removed.\nThe bot is fetching data from Archiveofourown.org.*", inline=False)
             
             embed.set_author(
                 name=fic.ao3_author_name, url=fic.ao3_author_url,
@@ -158,7 +158,7 @@ def ao3_metadata(query: str):
                 " words in "+fic.ao3_series_works+" work(s)", inline=True)
 
             embed.add_field(name="\u200b",  # zero-width whitespace character
-                            value="*If this content violates the server rules, react with 👎 and it will be removed.\nThe bot is fetching data from ArchiveOfOwnOwn.net.*", inline=False)
+                            value="*If this content violates the server rules, react with 👎 and it will be removed.\nThe bot is fetching data from Archiveofourown.org.*", inline=False)
             
             embed.set_author(
                 name=fic.ao3_author_name, url=fic.ao3_author_url,
