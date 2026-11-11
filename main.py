@@ -20,10 +20,13 @@ URL_VALIDATE = r"(?:(?:https?|ftp)://)(?:\S+(?::\S*)?@)?(?:(?:[1-9]\d?|1\d\d|2[0
 class FicFinder(commands.Bot):
     def __init__(self) -> None:
         # Use the minimal number of intents necessary to conserve memory.
+        # NOTE: message_content is intentionally NOT requested — the app is
+        # over Discord's 10k-user threshold, so that intent requires review.
+        # Slash commands carry their own text and work without it.
         super().__init__(
             command_prefix=",",
             help_command=None,
-            intents=discord.Intents(guilds=True, messages=True, reactions=True, message_content=True),
+            intents=discord.Intents(guilds=True, messages=True, reactions=True),
         )
 
         # Make sure all commands can only be invoked within guilds.
